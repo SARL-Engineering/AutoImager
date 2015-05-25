@@ -187,10 +187,19 @@ class ImageProcessor(QtCore.QThread):
             # Streaming settings
             self.camera.StreamBytesPerSecond = 115000000
 
+            # Exposure Settings
+            self.camera.ExposureAuto = 'Off'
+            self.camera.ExposureMode = 'Timed'
+            self.camera.ExposureTimeAbs = 360
+
             # White balance settings
-            self.camera.BalanceRatioAbs = .9
-            self.camera.BalanceRatioSelector = 'Red'
             self.camera.BalanceWhiteAuto = 'Off'
+            self.camera.BalanceRatioSelector = 'Red'
+            self.camera.BalanceRatioAbs = 0.96
+
+            self.camera.BalanceRatioSelector = 'Blue'
+            self.camera.BalanceRatioAbs = 3.0
+
 
             # Image settings
             self.camera.Width = 2000
@@ -271,12 +280,15 @@ class ImageProcessor(QtCore.QThread):
     def wait_for_run_display(self):
         ret = self.get_frame()
         if ret:
-            self.raw_image_data = np.ndarray(buffer = self.frame.getBufferByteData(), dtype = np.uint8,
-                                             shape = (self.frame.height, self.frame.width, self.frame.pixel_bytes))
+            self.raw_image_data = np.ndarray(buffer=self.frame.getBufferByteData(), dtype=np.uint8,
+                                             shape=(self.frame.height, self.frame.width, self.frame.pixel_bytes))
             self.live_view_raw_data = cv2.resize(self.raw_image_data, (240, 240))
 
-            height, width = self.live_view_raw_data.shape[:2]
-            self.live_view_QImage = QtGui.QImage(self.live_view_raw_data,
+            rgb_for_qimage = cv2.cvtColor(self.live_view_raw_data, cv2.COLOR_BGR2RGB)
+            rgb_for_qimage = cv2.resize(rgb_for_qimage, (240, 240))
+
+            height, width = rgb_for_qimage.shape[:2]
+            self.live_view_QImage = QtGui.QImage(rgb_for_qimage,
                                                  width,
                                                  height,
                                                  QtGui.QImage.Format_RGB888)
@@ -295,9 +307,10 @@ class ImageProcessor(QtCore.QThread):
 
             self.save_well_image_to_disk()
 
-            self.full_well_raw_data = cv2.resize(self.full_well_raw_data, (240, 240))
-            height, width = self.full_well_raw_data.shape[:2]
-            self.full_well_QImage = QtGui.QImage(self.full_well_raw_data,
+            rgb_for_qimage = cv2.cvtColor(self.full_well_raw_data, cv2.COLOR_BGR2RGB)
+            rgb_for_qimage = cv2.resize(rgb_for_qimage, (240, 240))
+            height, width = rgb_for_qimage.shape[:2]
+            self.full_well_QImage = QtGui.QImage(rgb_for_qimage,
                                                  width,
                                                  height,
                                                  QtGui.QImage.Format_RGB888)
@@ -312,11 +325,13 @@ class ImageProcessor(QtCore.QThread):
 
         # LIVE VIEW PORTION ##########
         # Create a re-sized version of data for live view display
-        self.live_view_raw_data = cv2.resize(self.raw_image_data, (240, 240))
+        rgb_for_qimage = cv2.cvtColor(self.raw_image_data, cv2.COLOR_BGR2RGB)
+        rgb_for_qimage = cv2.resize(rgb_for_qimage, (240, 240))
+        self.live_view_raw_data = cv2.resize(rgb_for_qimage, (240, 240))
 
         # Convert this live view image data to a QImage for display on the gui
-        height, width = self.live_view_raw_data.shape[:2]
-        self.live_view_QImage = QtGui.QImage(self.live_view_raw_data,
+        height, width = rgb_for_qimage.shape[:2]
+        self.live_view_QImage = QtGui.QImage(rgb_for_qimage,
                                              width,
                                              height,
                                              QtGui.QImage.Format_RGB888)
@@ -375,10 +390,11 @@ class ImageProcessor(QtCore.QThread):
         if not os.path.isdir(root_path_string):
             os.makedirs(root_path_string)
 
+        # temp_rgb = self.raw_image_data
         temp_rgb = cv2.cvtColor(self.raw_image_data, cv2.COLOR_BGR2RGB)
 
         # print full_path_string
-        cv2.imwrite(full_path_string, temp_rgb)
+        cv2.imwrite(full_path_string, self.raw_image_data)
 
         self.stitch_well_to_composite(temp_rgb)
 
@@ -391,7 +407,7 @@ class ImageProcessor(QtCore.QThread):
         scaled = self.composite_image_PIL.resize((600, 400))
 
         temp_cv = np.array(scaled)
-        temp_cv = cv2.cvtColor(temp_cv, cv2.COLOR_RGBA2BGR)
+        temp_cv = cv2.cvtColor(temp_cv, cv2.COLOR_RGBA2RGB)
 
         height, width = temp_cv.shape[:2]
         self.composite_QImage = QtGui.QImage(temp_cv,

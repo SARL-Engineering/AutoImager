@@ -38,8 +38,7 @@ __status__ = "Development"
 # Imports
 #####################################
 # Python native imports
-from PyQt4 import QtCore, QtGui
-# import MMCorePy
+from PyQt4 import QtCore
 import pythoncom
 import win32com.client
 import os
@@ -193,24 +192,44 @@ class MicroscopeInterface(QtCore.QThread):
             pythoncom.CoInitialize()
             self.interface = win32com.client.Dispatch("Nikon.TiScope.NikonTi")
             self.interface.Device = self.interface.Devices(1)
+            self.interface.Device.WaitForDevice(10000)
+            self.msleep(350)
         # TODO: New check to make sure all parts are connected
         self.scope_connected_successfully = True
 
     def initialize_microscope(self):
         self.interface.NosePiece.Position = nose_piece_1x_objective
-
-        self.move_to_position(self.a1_x, self.a1_y)
+        self.interface.Device.WaitForDevice(10000)
+        self.msleep(100)
 
         self.move_to_z_position(2000)
 
+        self.msleep(100)
+
+        self.move_to_position(self.a1_x, self.a1_y)
+
+        self.msleep(100)
+
         self.interface.LightPathDrive.Position = light_path_ll00
+        self.interface.Device.WaitForDevice(10000)
+
+        self.msleep(100)
 
         if not self.interface.DiaLamp.IsControlled():
             self.interface.DiaLamp.IsControlled = 1
+            self.interface.Device.WaitForDevice(10000)
+
+        self.msleep(100)
 
         self.interface.DiaLamp.On()
+        self.interface.Device.WaitForDevice(10000)
+
+        self.msleep(100)
 
         self.interface.DiaLamp.Value = 24
+        self.interface.Device.WaitForDevice(10000)
+
+        self.msleep(100)
 
         self.scope_initialized = True
 
@@ -234,21 +253,38 @@ class MicroscopeInterface(QtCore.QThread):
         pass
 
     def move_to_position(self, x, y):
-        self.interface.XDrive.Position = int(x)*10
-        self.interface.YDrive.Position = int(y)*10
+        try:
+            self.interface.XDrive.Position = int(x)*10
+            print self.interface.Device.WaitForDevice(10000)
+            self.interface.YDrive.Position = int(y)*10
+            print self.interface.Device.WaitForDevice(10000)
+        except Exception,e:
+            print e
+            print "Potential problems moving..."
 
     def move_to_z_position(self, z):
         self.interface.ZDrive.Position = int(z) * 40
+        self.interface.Device.WaitForDevice(10000)
 
     def wait_for_xy_stage(self):
         pass
 
     def move_to_relative_position(self, x, y):
         if x != 0:
-            self.interface.XDrive.MoveRelative(int(x)*10)
+            try:
+                self.interface.XDrive.MoveRelative(int(x)*10)
+                self.interface.Device.WaitForDevice(10000)
+            except Exception, e:
+                print "Trouble moving x to " + str(x)
+                print "Exception was: " + e.message
 
         if y != 0:
-            self.interface.YDrive.MoveRelative(int(y)*10)
+            try:
+                self.interface.YDrive.MoveRelative(int(y)*10)
+                self.interface.Device.WaitForDevice(10000)
+            except Exception, e:
+                print "Trouble moving y to " + str(x)
+                print "Exception was: " + e.message
 
     def get_position(self):
         pass

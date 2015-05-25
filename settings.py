@@ -51,7 +51,7 @@ class Settings(QtCore.QObject):
         self.plate_local_path_full = None
         self.plate_remote_path_full = None
 
-        self.image_stabilization_delay = 250
+        self.image_stabilization_delay = 500
 
         # Settings tab settings
         # - General
