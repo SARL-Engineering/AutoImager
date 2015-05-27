@@ -78,7 +78,6 @@ class MicroscopeInterface(QtCore.QThread):
 
         self.master = parent
 
-
         os.popen("taskkill /im NikonTiS.exe /F")
         time.sleep(1)
 
@@ -87,9 +86,6 @@ class MicroscopeInterface(QtCore.QThread):
         self.a1_x = -47742
         self.a1_y = 30885
 
-        self.prev_x = -99999
-        self.prev_y = -99999
-
         self.curr_x = -1
         self.curr_y = -1
 
@@ -97,9 +93,10 @@ class MicroscopeInterface(QtCore.QThread):
 
         self.allowable_error_xy = 8
 
-        self.requested_x_position = None
-        self.requested_y_position = None
+        self.x_position = None
+        self.y_position = None
         self.requested_z_position = None
+
         self.requested_light_intensity = None
         self.requested_objective = None
 
@@ -203,11 +200,9 @@ class MicroscopeInterface(QtCore.QThread):
         self.msleep(100)
 
         self.move_to_z_position(2000)
-
         self.msleep(100)
 
         self.move_to_position(self.a1_x, self.a1_y)
-
         self.msleep(100)
 
         self.interface.LightPathDrive.Position = light_path_ll00
@@ -253,38 +248,53 @@ class MicroscopeInterface(QtCore.QThread):
         pass
 
     def move_to_position(self, x, y):
-        try:
-            self.interface.XDrive.Position = int(x)*10
-            print self.interface.Device.WaitForDevice(10000)
-            self.interface.YDrive.Position = int(y)*10
-            print self.interface.Device.WaitForDevice(10000)
-        except Exception,e:
-            print e
-            print "Potential problems moving..."
+        self.interface.Device.WaitForDevice(10000)
+
+        x_position = int(int(self.interface.XDrive.Position) / 10)
+        while x_position != x:
+            try:
+                self.interface.XDrive.Position = int(x)*10
+                self.interface.Device.WaitForDevice(10000)
+            except Exception, e:
+                print "Exception moving X."
+            x_position = int(int(self.interface.XDrive.Position) / 10)
+            self.interface.Device.WaitForDevice(10000)
+            self.msleep(150)
+
+        y_position = int(int(self.interface.YDrive.Position) / 10)
+        while y_position != y:
+            try:
+                self.interface.YDrive.Position = int(y)*10
+                self.interface.Device.WaitForDevice(10000)
+            except Exception, e:
+                print "Exception moving Y."
+            y_position = int(int(self.interface.YDrive.Position) / 10)
+            self.interface.Device.WaitForDevice(10000)
+            self.msleep(150)
+
+        self.x_position = x
+        self.y_position = y
 
     def move_to_z_position(self, z):
-        self.interface.ZDrive.Position = int(z) * 40
-        self.interface.Device.WaitForDevice(10000)
+        z_position = int(int(self.interface.ZDrive.Position) / 40)
+        while z_position != z:
+            try:
+                self.interface.ZDrive.Position = int(z) * 40
+                self.interface.Device.WaitForDevice(10000)
+            except Exception, e:
+                print e
+                print "Exception moving Z."
+            z_position = int(int(self.interface.ZDrive.Position) / 10)
+            self.interface.Device.WaitForDevice(10000)
+            self.msleep(150)
 
     def wait_for_xy_stage(self):
         pass
 
     def move_to_relative_position(self, x, y):
-        if x != 0:
-            try:
-                self.interface.XDrive.MoveRelative(int(x)*10)
-                self.interface.Device.WaitForDevice(10000)
-            except Exception, e:
-                print "Trouble moving x to " + str(x)
-                print "Exception was: " + e.message
-
-        if y != 0:
-            try:
-                self.interface.YDrive.MoveRelative(int(y)*10)
-                self.interface.Device.WaitForDevice(10000)
-            except Exception, e:
-                print "Trouble moving y to " + str(x)
-                print "Exception was: " + e.message
+        new_x = self.x_position + int(x)
+        new_y = self.y_position + int(y)
+        self.move_to_position(new_x, new_y)
 
     def get_position(self):
         pass
@@ -317,8 +327,6 @@ class MicroscopeInterface(QtCore.QThread):
         self.well_capture_move_requested_flag = False
 
     def on_well_capture_move_requested_slot(self, x, y):
-        self.requested_x_position = x
-        self.requested_y_position = y
         self.well_capture_move_requested_flag = True
 
     def on_coordinated_cycle_signal_slot(self):
