@@ -192,7 +192,7 @@ class MicroscopeInterface(QtCore.QThread):
             pythoncom.CoInitialize()
             self.interface = win32com.client.Dispatch("Nikon.TiScope.NikonTi")
             self.interface.Device = self.interface.Devices(1)
-            self.interface.YDrive.Speed = win32com.client.constants.Speed5
+            self.interface.YDrive.Speed = win32com.client.constants.Speed6 # FIXME:SPEED5
             self.interface.XDrive.Speed = win32com.client.constants.Speed1
             self.msleep(350)
         # TODO: New check to make sure all parts are connected
@@ -252,53 +252,47 @@ class MicroscopeInterface(QtCore.QThread):
         pass
 
     def move_to_position(self, x, y):
-        # self.wait_for_microscope()
-        #
-        # x_position = int(int(self.interface.XDrive.Position) / 10)
-        # while abs(x_position - x) > 1:
-        #     try:
-        #         self.interface.XDrive.Position = int(x)*10
-        #         self.interface.Device.WaitForDevice(10000)
-        #     except Exception, e:
-        #         print "Exception moving X."
-        #     x_position = int(int(self.interface.XDrive.Position) / 10)
-        #     self.interface.Device.WaitForDevice(10000)
-        #     #self.msleep(150)
-        #
-        # y_position = int(int(self.interface.YDrive.Position) / 10)
-        # while abs(y_position - y) > 1:
-        #     try:
-        #         self.interface.YDrive.Position = int(y)*10
-        #         self.interface.Device.WaitForDevice(10000)
-        #     except Exception, e:
-        #         print "Exception moving Y."
-        #     y_position = int(int(self.interface.YDrive.Position) / 10)
-        #     self.interface.Device.WaitForDevice(10000)
-        #     #self.msleep(150)
-        #
-        # self.x_position = x
-        # self.y_position = y
+        x_position = int(int(self.interface.XDrive.Position) / 10)
+        while abs(x_position - x) > 10:
+            try:
+                self.interface.XDrive.Speed = win32com.client.constants.Speed1
+                self.interface.XDrive.Position = int(x)*10
+            except Exception, e:
+                print "Exception moving X."
+            x_position = int(int(self.interface.XDrive.Position) / 10)
 
-        try:
-            start = time.clock()
-            self.interface.XDrive.Position = int(x)*10
-            stop = time.clock()
-            print "Moved x in " + str(stop-start) + " seconds."
-            # self.wait_for_microscope()
-        except Exception, e:
-            print "Exception moving X."
-
-        try:
-            start = time.clock()
-            self.interface.YDrive.Position = int(y)*10
-            stop = time.clock()
-            print "Moved y in " + str(stop-start) + " seconds."
-            # self.wait_for_microscope()
-        except Exception, e:
-            print "Exception moving Y."
+        y_position = int(int(self.interface.YDrive.Position) / 10)
+        while abs(y_position - y) > 10:
+            try:
+                self.interface.YDrive.Speed = win32com.client.constants.Speed6
+                self.interface.YDrive.Position = int(y)*10
+            except Exception, e:
+                print "Exception moving Y."
+            y_position = int(int(self.interface.YDrive.Position) / 10)
 
         self.x_position = x
         self.y_position = y
+
+        # try:
+        #     start = time.clock()
+        #     self.interface.XDrive.Position = int(x)*10
+        #     stop = time.clock()
+        #     print "Moved x in " + str(stop-start) + " seconds."
+        #     # self.wait_for_microscope()
+        # except Exception, e:
+        #     print "Exception moving X."
+        #
+        # try:
+        #     start = time.clock()
+        #     self.interface.YDrive.Position = int(y)*10
+        #     stop = time.clock()
+        #     print "Moved y in " + str(stop-start) + " seconds."
+        #     # self.wait_for_microscope()
+        # except Exception, e:
+        #     print "Exception moving Y."
+        #
+        # self.x_position = x
+        # self.y_position = y
 
     def move_to_z_position(self, z):
         z_position = int(int(self.interface.ZDrive.Position) / 40)
